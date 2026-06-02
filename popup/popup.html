@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Radio Selector Clicker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+  <main>
+    <h1>Macro Clicker</h1>
+
+    <p>Right-click any page element and choose "Save element for macro." Then run the saved steps in order.</p>
+
+    <label>
+      Delay between actions, ms
+      <input id="delayMs" type="number" min="0" step="50">
+    </label>
+
+    <label>
+      Loop count
+      <input id="loopCount" type="number" min="1" step="1" value="1">
+    </label>
+
+    <p id="executionCount">Total executions: 0</p>
+
+    <div class="steps">
+      <h2>Saved macro steps</h2>
+      <ol id="macroList"></ol>
+    </div>
+
+    <div class="actions">
+      <button id="save" type="button">Save delay</button>
+      <button id="run" type="button">Run macro</button>
+      <button id="runLoop" type="button">Run loop</button>
+      <button id="clear" type="button">Clear steps</button>
+    </div>
+
+    <p id="status" role="status"></p>
+
+    <div class="log">
+      <h2>Run log</h2>
+      <ul id="macroLog"></ul>
+    </div>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>

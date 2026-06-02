@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Radio Selector Clicker",
+  "version": "1.0.0",
+  "description": "Selects a radio input and clicks a button on the current page.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Radio Selector Clicker"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

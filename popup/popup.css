@@ -1,0 +1,208 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 340px;
+  margin: 0;
+  background: #f7f8fa;
+  color: #18202b;
+}
+
+main {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+h1 {
+  margin: 0 0 2px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 650;
+  color: #384252;
+}
+
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #c9d0dc;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #fff;
+  color: #18202b;
+  font: inherit;
+  font-size: 13px;
+}
+
+input:focus {
+  border-color: #346fd6;
+  outline: 2px solid #b9cdf6;
+  outline-offset: 0;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.steps {
+  margin-top: 8px;
+}
+
+.steps h2 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.steps ol {
+  margin: 0;
+  padding-left: 0;
+  color: #384252;
+  font-size: 13px;
+}
+
+.steps li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #d9e1ea;
+  list-style: none;
+}
+
+.steps li:last-child {
+  margin-bottom: 0;
+}
+
+.steps .step-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: #24324a;
+}
+
+.steps .step-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.steps .step-button,
+.steps .step-remove-button {
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 0;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.steps .step-button {
+  background: #4d6e9d;
+  color: white;
+}
+
+.steps .step-button:hover {
+  background: #2f4e78;
+}
+
+.steps .step-remove-button {
+  background: #e3e7ee;
+  color: #18202b;
+}
+
+.steps .step-remove-button:hover {
+  background: #d4dae4;
+}
+
+button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #263241;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+button:hover {
+  background: #17202b;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+#save {
+  background: #e3e7ee;
+  color: #18202b;
+}
+
+#save:hover {
+  background: #d4dae4;
+}
+
+#status {
+  min-height: 18px;
+  margin: 0;
+  color: #526071;
+  font-size: 12px;
+}
+
+#status.error {
+  color: #a91d2a;
+}
+
+#status.success {
+  color: #17633a;
+}
+
+.log {
+  margin-top: 14px;
+}
+
+.log h2 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+#macroLog {
+  margin: 0;
+  padding-left: 18px;
+  max-height: 120px;
+  overflow-y: auto;
+  color: #384252;
+  font-size: 13px;
+}
+
+#macroLog li {
+  margin-bottom: 6px;
+}
