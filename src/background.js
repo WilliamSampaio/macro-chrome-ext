@@ -15,9 +15,9 @@ function createContextMenu() {
 }
 
 function saveMacroStep(step) {
-    chrome.storage.sync.get({ macroSteps: [] }, (data) => {
+    chrome.storage.local.get({ macroSteps: [] }, (data) => {
         const macroSteps = Array.isArray(data.macroSteps) ? data.macroSteps : [];
-        chrome.storage.sync.set({ macroSteps: [...macroSteps, step] });
+        chrome.storage.local.set({ macroSteps: [...macroSteps, step] });
     });
 }
 

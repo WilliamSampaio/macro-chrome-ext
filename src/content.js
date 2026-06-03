@@ -259,7 +259,7 @@ async function executeMacroSteps(settings, startIndex = 0) {
   }
 
   for (let i = startIndex; i < settings.macroSteps.length; i += 1) {
-    await chrome.storage.sync.set({ macroRunning: true, currentMacroStep: i + 1 });
+    await chrome.storage.local.set({ macroRunning: true, currentMacroStep: i + 1 });
 
     const step = settings.macroSteps[i];
     const description = step.type === "text"
@@ -284,10 +284,10 @@ async function executeMacroSteps(settings, startIndex = 0) {
     }
   }
 
-  await chrome.storage.sync.set({ currentMacroStep: settings.macroSteps.length });
+  await chrome.storage.local.set({ currentMacroStep: settings.macroSteps.length });
   // Reset currentMacroStep so a finished run is clearly at the beginning
   // This makes resume logic simpler: a completed run reports step 0.
-  await chrome.storage.sync.set({ currentMacroStep: 0 });
+  await chrome.storage.local.set({ currentMacroStep: 0 });
 
   return {
     executedSteps: settings.macroSteps.length
@@ -295,7 +295,7 @@ async function executeMacroSteps(settings, startIndex = 0) {
 }
 
 async function runSingleMacro(settings) {
-  await chrome.storage.sync.set({
+  await chrome.storage.local.set({
     macroRunning: true,
     currentMacroStep: 0,
     macroLoopRemaining: 0
@@ -305,7 +305,7 @@ async function runSingleMacro(settings) {
   const result = await executeMacroSteps(settings, 0);
   sendLog("Macro finished.", "info");
 
-  await chrome.storage.sync.set({
+  await chrome.storage.local.set({
     macroRunning: false,
     currentMacroStep: 0,
     macroLoopRemaining: 0
@@ -322,7 +322,7 @@ async function runLoopMacro(settings, count) {
   let executedRuns = 0;
   let remaining = count;
 
-  await chrome.storage.sync.set({
+  await chrome.storage.local.set({
     macroRunning: true,
     currentMacroStep: 0,
     macroLoopRemaining: remaining
@@ -339,7 +339,7 @@ async function runLoopMacro(settings, count) {
     currentSettings.macroLoopRemaining = remaining;
     currentSettings.macroExecutionCount = Number(currentSettings.macroExecutionCount || 0) + 1;
 
-    await chrome.storage.sync.set({
+    await chrome.storage.local.set({
       macroLoopRemaining: remaining,
       macroExecutionCount: currentSettings.macroExecutionCount,
       currentMacroStep: 0,
@@ -360,7 +360,7 @@ async function runLoopMacro(settings, count) {
 
   sendLog(`Loop finished: ${executedRuns} run(s) completed.`, "info");
 
-  await chrome.storage.sync.set({
+  await chrome.storage.local.set({
     macroRunning: false,
     currentMacroStep: 0,
     macroLoopRemaining: 0
@@ -396,7 +396,7 @@ async function runStep(settings, stepIndex) {
 }
 
 async function getSettings() {
-  const stored = await chrome.storage.sync.get(DEFAULTS);
+  const stored = await chrome.storage.local.get(DEFAULTS);
 
   return {
     ...DEFAULTS,
@@ -420,7 +420,7 @@ async function resumeMacroIfNeeded() {
   if (settings.currentMacroStep >= settings.macroSteps.length) {
     if (settings.macroLoopRemaining > 0) {
       // Ensure we read fresh settings from storage in case values changed
-      await chrome.storage.sync.set({ currentMacroStep: 0 });
+      await chrome.storage.local.set({ currentMacroStep: 0 });
       window.setTimeout(async () => {
         try {
           const fresh = await getSettings();
@@ -432,7 +432,7 @@ async function resumeMacroIfNeeded() {
       return;
     }
 
-    await chrome.storage.sync.set({ macroRunning: false, currentMacroStep: 0, macroLoopRemaining: 0 });
+    await chrome.storage.local.set({ macroRunning: false, currentMacroStep: 0, macroLoopRemaining: 0 });
     return;
   }
 

@@ -101,7 +101,7 @@ function renderMacroSteps(steps) {
 
 async function removeStep(stepIndex) {
   try {
-    const stored = await chrome.storage.sync.get(DEFAULTS);
+    const stored = await chrome.storage.local.get(DEFAULTS);
     const macroSteps = Array.isArray(stored.macroSteps) ? stored.macroSteps : [];
 
     if (stepIndex < 0 || stepIndex >= macroSteps.length) {
@@ -109,7 +109,7 @@ async function removeStep(stepIndex) {
     }
 
     macroSteps.splice(stepIndex, 1);
-    await chrome.storage.sync.set({ macroSteps });
+    await chrome.storage.local.set({ macroSteps });
     renderMacroSteps(macroSteps);
     setStatus(`Step ${stepIndex + 1} removed.`, "success");
   } catch (error) {
@@ -143,7 +143,7 @@ async function runStep(stepIndex) {
 
 async function saveSettings() {
   const settings = readForm();
-  await chrome.storage.sync.set(settings);
+  await chrome.storage.local.set(settings);
   setStatus("Settings saved.", "success");
   return settings;
 }
@@ -155,7 +155,7 @@ async function runLoop() {
 
   try {
     const settings = readForm();
-    await chrome.storage.sync.set(settings);
+    await chrome.storage.local.set(settings);
     const tab = await getActiveTab();
 
     if (!tab?.id) {
@@ -186,7 +186,7 @@ async function runLoop() {
 }
 
 async function clearMacroSteps() {
-  await chrome.storage.sync.set({ macroSteps: [] });
+  await chrome.storage.local.set({ macroSteps: [] });
   renderMacroSteps([]);
   setStatus("Saved macro steps cleared.", "success");
 }
@@ -203,7 +203,7 @@ async function runMacro() {
 
   try {
     const settings = readForm();
-    await chrome.storage.sync.set(settings);
+    await chrome.storage.local.set(settings);
     const tab = await getActiveTab();
 
     if (!tab?.id) {
@@ -230,7 +230,7 @@ async function runMacro() {
 }
 
 async function init() {
-  const stored = await chrome.storage.sync.get(DEFAULTS);
+  const stored = await chrome.storage.local.get(DEFAULTS);
   const settings = { ...DEFAULTS, ...stored };
   writeForm(settings);
   renderMacroSteps(settings.macroSteps);
