@@ -16,8 +16,19 @@
 
     <label>
       Delay between actions, ms
-      <input id="delayMs" type="number" min="0" step="50">
+      <span class="delay-control">
+        <input id="delayMs" type="number" min="0" step="50">
+        <button id="save" class="save-delay-button" type="button" aria-label="Save delay" title="Save delay">
+          <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+            <path d="M17 21v-8H7v8"></path>
+            <path d="M7 3v5h8"></path>
+          </svg>
+        </button>
+      </span>
     </label>
+
+    <p id="status" role="status"></p>
 
     <label>
       Loop count
@@ -32,13 +43,10 @@
     </div>
 
     <div class="actions">
-      <button id="save" type="button">Save delay</button>
       <button id="run" type="button">Run macro</button>
       <button id="runLoop" type="button">Run loop</button>
       <button id="clear" type="button">Clear steps</button>
     </div>
-
-    <p id="status" role="status"></p>
 
     <div class="log">
       <h2>Run log</h2>
