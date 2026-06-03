@@ -12,15 +12,20 @@ const fields = {
   run: document.querySelector("#run"),
   runLoop: document.querySelector("#runLoop"),
   clear: document.querySelector("#clear"),
-  status: document.querySelector("#status"),
-  executionCount: document.querySelector("#executionCount"),
+  delayStatus: document.querySelector("#delayStatus"),
+  actionStatus: document.querySelector("#actionStatus"),
   macroList: document.querySelector("#macroList"),
   macroLog: document.querySelector("#macroLog")
 };
 
-function setStatus(message, type = "") {
-  fields.status.textContent = message;
-  fields.status.className = type;
+function setDelayStatus(message, type = "") {
+  fields.delayStatus.textContent = message;
+  fields.delayStatus.className = `status ${type}`.trim();
+}
+
+function setActionStatus(message, type = "") {
+  fields.actionStatus.textContent = message;
+  fields.actionStatus.className = `status ${type}`.trim();
 }
 
 function readForm() {
@@ -33,7 +38,6 @@ function readForm() {
 function writeForm(settings) {
   fields.delayMs.value = settings.delayMs;
   fields.loopCount.value = settings.loopCount;
-  fields.executionCount.textContent = `Total executions: ${settings.macroExecutionCount || 0}`;
 }
 
 function appendLogEntry(text, status = "info") {
@@ -111,14 +115,14 @@ async function removeStep(stepIndex) {
     macroSteps.splice(stepIndex, 1);
     await chrome.storage.local.set({ macroSteps });
     renderMacroSteps(macroSteps);
-    setStatus(`Step ${stepIndex + 1} removed.`, "success");
+    setActionStatus(`Step ${stepIndex + 1} removed.`, "success");
   } catch (error) {
-    setStatus(error.message, "error");
+    setActionStatus(error.message, "error");
   }
 }
 
 async function runStep(stepIndex) {
-  setStatus(`Running step ${stepIndex + 1}...`);
+  setActionStatus(`Running step ${stepIndex + 1}...`);
 
   try {
     const tab = await getActiveTab();
@@ -135,22 +139,22 @@ async function runStep(stepIndex) {
       throw new Error(response?.error || "The page did not respond.");
     }
 
-    setStatus(`Step ${stepIndex + 1} executed successfully.`, "success");
+    setActionStatus(`Step ${stepIndex + 1} executed successfully.`, "success");
   } catch (error) {
-    setStatus(error.message, "error");
+    setActionStatus(error.message, "error");
   }
 }
 
 async function saveSettings() {
   const settings = readForm();
   await chrome.storage.local.set(settings);
-  setStatus("Settings saved.", "success");
+  setDelayStatus("Delay saved.", "success");
   return settings;
 }
 
 async function runLoop() {
   fields.runLoop.disabled = true;
-  setStatus("Starting loop...");
+  setActionStatus("Starting loop...");
   clearLog();
 
   try {
@@ -172,14 +176,13 @@ async function runLoop() {
     }
 
     if (response.result?.started) {
-      setStatus("Loop started.", "success");
+      setActionStatus("Loop started.", "success");
       return;
     }
 
-    setStatus(`Loop completed: ${response.result?.executedRuns || 0} run(s). Total executions: ${response.result?.totalExecutions || 0}`, "success");
-    fields.executionCount.textContent = `Total executions: ${response.result?.totalExecutions || 0}`;
+    setActionStatus(`Loop completed: ${response.result?.executedRuns || 0} run(s).`, "success");
   } catch (error) {
-    setStatus(error.message, "error");
+    setActionStatus(error.message, "error");
   } finally {
     fields.runLoop.disabled = false;
   }
@@ -188,7 +191,7 @@ async function runLoop() {
 async function clearMacroSteps() {
   await chrome.storage.local.set({ macroSteps: [] });
   renderMacroSteps([]);
-  setStatus("Saved macro steps cleared.", "success");
+  setActionStatus("Saved macro steps cleared.", "success");
 }
 
 async function getActiveTab() {
@@ -198,7 +201,7 @@ async function getActiveTab() {
 
 async function runMacro() {
   fields.run.disabled = true;
-  setStatus("Running macro...");
+  setActionStatus("Running macro...");
   clearLog();
 
   try {
@@ -217,13 +220,13 @@ async function runMacro() {
     }
 
     if (response.result?.started) {
-      setStatus("Macro started.", "success");
+      setActionStatus("Macro started.", "success");
       return;
     }
 
-    setStatus(`Macro completed: ${response.result?.executedSteps || 0} step(s).`, "success");
+    setActionStatus(`Macro completed: ${response.result?.executedSteps || 0} step(s).`, "success");
   } catch (error) {
-    setStatus(error.message, "error");
+    setActionStatus(error.message, "error");
   } finally {
     fields.run.disabled = false;
   }
@@ -241,25 +244,20 @@ async function init() {
       return false;
     }
 
-    if (message?.type === "MACRO_EXECUTION_COUNT") {
-      fields.executionCount.textContent = `Total executions: ${message.count}`;
-      return false;
-    }
-
     return false;
   });
 
   fields.save.addEventListener("click", () => {
-    saveSettings().catch((error) => setStatus(error.message, "error"));
+    saveSettings().catch((error) => setDelayStatus(error.message, "error"));
   });
 
   fields.run.addEventListener("click", runMacro);
   fields.runLoop.addEventListener("click", () => {
-    runLoop().catch((error) => setStatus(error.message, "error"));
+    runLoop().catch((error) => setActionStatus(error.message, "error"));
   });
   fields.clear.addEventListener("click", () => {
-    clearMacroSteps().catch((error) => setStatus(error.message, "error"));
+    clearMacroSteps().catch((error) => setActionStatus(error.message, "error"));
   });
 }
 
-init().catch((error) => setStatus(error.message, "error"));
+init().catch((error) => setActionStatus(error.message, "error"));

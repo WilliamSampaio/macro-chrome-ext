@@ -28,14 +28,12 @@
       </span>
     </label>
 
-    <p id="status" role="status"></p>
+    <p id="delayStatus" class="status" role="status"></p>
 
     <label>
       Loop count
       <input id="loopCount" type="number" min="1" step="1" value="1">
     </label>
-
-    <p id="executionCount">Total executions: 0</p>
 
     <div class="steps">
       <h2>Saved macro steps</h2>
@@ -47,6 +45,8 @@
       <button id="runLoop" type="button">Run loop</button>
       <button id="clear" type="button">Clear steps</button>
     </div>
+
+    <p id="actionStatus" class="status" role="status"></p>
 
     <div class="log">
       <h2>Run log</h2>
