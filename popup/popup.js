@@ -1,8 +1,7 @@
 const DEFAULTS = {
   delayMs: 200,
   loopCount: 1,
-  macroSteps: [],
-  macroExecutionCount: 0
+  macroSteps: []
 };
 
 const fields = {
@@ -17,6 +16,8 @@ const fields = {
   macroList: document.querySelector("#macroList"),
   macroLog: document.querySelector("#macroLog")
 };
+
+let activeTabId = null;
 
 function setDelayStatus(message, type = "") {
   fields.delayStatus.textContent = message;
@@ -132,7 +133,8 @@ async function runStep(stepIndex) {
 
     const response = await chrome.tabs.sendMessage(tab.id, {
       type: "RUN_MACRO_STEP",
-      stepIndex
+      stepIndex,
+      tabId: tab.id
     });
 
     if (!response?.ok) {
@@ -168,7 +170,8 @@ async function runLoop() {
 
     const response = await chrome.tabs.sendMessage(tab.id, {
       type: "RUN_MACRO_LOOP",
-      loopCount: settings.loopCount
+      loopCount: settings.loopCount,
+      tabId: tab.id
     });
 
     if (!response?.ok) {
@@ -213,7 +216,10 @@ async function runMacro() {
       throw new Error("No active tab found.");
     }
 
-    const response = await chrome.tabs.sendMessage(tab.id, { type: "RUN_MACRO" });
+    const response = await chrome.tabs.sendMessage(tab.id, {
+      type: "RUN_MACRO",
+      tabId: tab.id
+    });
 
     if (!response?.ok) {
       throw new Error(response?.error || "The page did not respond.");
@@ -233,6 +239,8 @@ async function runMacro() {
 }
 
 async function init() {
+  const activeTab = await getActiveTab();
+  activeTabId = activeTab?.id || null;
   const stored = await chrome.storage.local.get(DEFAULTS);
   const settings = { ...DEFAULTS, ...stored };
   writeForm(settings);
@@ -240,6 +248,10 @@ async function init() {
 
   chrome.runtime.onMessage.addListener((message) => {
     if (message?.type === "MACRO_LOG") {
+      if (message.tabId && message.tabId !== activeTabId) {
+        return false;
+      }
+
       appendLogEntry(message.message, message.status);
       return false;
     }

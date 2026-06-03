@@ -1,7 +1,10 @@
 const DEFAULTS = {
   delayMs: 200,
   loopCount: 1,
-  macroSteps: [],
+  macroSteps: []
+};
+
+const EXECUTION_DEFAULTS = {
   macroRunning: false,
   currentMacroStep: 0,
   macroLoopRemaining: 0,
@@ -130,17 +133,9 @@ function getXPath(element) {
   return `/${segments.join("/")}`;
 }
 
-function sendLog(message, status = "info") {
+function sendLog(message, status = "info", tabId = null) {
   try {
-    chrome.runtime.sendMessage({ type: "MACRO_LOG", message, status });
-  } catch (error) {
-    // ignore if the popup is not open
-  }
-}
-
-function updateExecutionCount(count) {
-  try {
-    chrome.runtime.sendMessage({ type: "MACRO_EXECUTION_COUNT", count });
+    chrome.runtime.sendMessage({ type: "MACRO_LOG", message, status, tabId });
   } catch (error) {
     // ignore if the popup is not open
   }
@@ -253,13 +248,46 @@ function interactWithElement(element) {
   element.click();
 }
 
-async function executeMacroSteps(settings, startIndex = 0) {
+function normalizeExecutionState(state = {}) {
+  return {
+    macroRunning: Boolean(state.macroRunning),
+    currentMacroStep: Number(state.currentMacroStep) || 0,
+    macroLoopRemaining: Number(state.macroLoopRemaining) || 0,
+    macroExecutionCount: Number(state.macroExecutionCount) || 0
+  };
+}
+
+function tabExecutionStorageKey(tabId) {
+  return `macroExecution:${tabId}`;
+}
+
+async function getCurrentTabId() {
+  const response = await chrome.runtime.sendMessage({ type: "GET_TAB_ID" });
+
+  if (!response?.ok || !Number.isFinite(Number(response.tabId))) {
+    throw new Error(response?.error || "Could not determine the current tab.");
+  }
+
+  return Number(response.tabId);
+}
+
+async function setExecutionState(tabId, updates) {
+  const key = tabExecutionStorageKey(tabId);
+  const stored = await chrome.storage.local.get({ [key]: EXECUTION_DEFAULTS });
+  const current = normalizeExecutionState(stored[key]);
+
+  await chrome.storage.local.set({
+    [key]: normalizeExecutionState({ ...current, ...updates })
+  });
+}
+
+async function executeMacroSteps(settings, tabId, startIndex = 0) {
   if (!Array.isArray(settings.macroSteps) || settings.macroSteps.length === 0) {
     throw new Error("No saved macro steps found.");
   }
 
   for (let i = startIndex; i < settings.macroSteps.length; i += 1) {
-    await chrome.storage.local.set({ macroRunning: true, currentMacroStep: i + 1 });
+    await setExecutionState(tabId, { macroRunning: true, currentMacroStep: i + 1 });
 
     const step = settings.macroSteps[i];
     const description = step.type === "text"
@@ -274,9 +302,9 @@ async function executeMacroSteps(settings, startIndex = 0) {
       }
 
       interactWithElement(element);
-      sendLog(`Step ${i + 1} succeeded: ${description}`, "success");
+      sendLog(`Step ${i + 1} succeeded: ${description}`, "success", tabId);
     } catch (error) {
-      sendLog(`Step ${i + 1} failed: ${description} — ${error.message}`, "error");
+      sendLog(`Step ${i + 1} failed: ${description} — ${error.message}`, "error", tabId);
     }
 
     if (i < settings.macroSteps.length - 1) {
@@ -284,28 +312,28 @@ async function executeMacroSteps(settings, startIndex = 0) {
     }
   }
 
-  await chrome.storage.local.set({ currentMacroStep: settings.macroSteps.length });
+  await setExecutionState(tabId, { currentMacroStep: settings.macroSteps.length });
   // Reset currentMacroStep so a finished run is clearly at the beginning
   // This makes resume logic simpler: a completed run reports step 0.
-  await chrome.storage.local.set({ currentMacroStep: 0 });
+  await setExecutionState(tabId, { currentMacroStep: 0 });
 
   return {
     executedSteps: settings.macroSteps.length
   };
 }
 
-async function runSingleMacro(settings) {
-  await chrome.storage.local.set({
+async function runSingleMacro(settings, tabId) {
+  await setExecutionState(tabId, {
     macroRunning: true,
     currentMacroStep: 0,
     macroLoopRemaining: 0
   });
 
-  sendLog("Macro started.", "info");
-  const result = await executeMacroSteps(settings, 0);
-  sendLog("Macro finished.", "info");
+  sendLog("Macro started.", "info", tabId);
+  const result = await executeMacroSteps(settings, tabId, 0);
+  sendLog("Macro finished.", "info", tabId);
 
-  await chrome.storage.local.set({
+  await setExecutionState(tabId, {
     macroRunning: false,
     currentMacroStep: 0,
     macroLoopRemaining: 0
@@ -314,53 +342,53 @@ async function runSingleMacro(settings) {
   return result;
 }
 
-async function runLoopMacro(settings, count) {
+async function runLoopMacro(settings, tabId, count) {
   if (!Number.isFinite(count) || count < 1) {
     throw new Error("Loop count must be at least 1.");
   }
 
   let executedRuns = 0;
   let remaining = count;
+  let totalExecutions = settings.macroExecutionCount;
 
-  await chrome.storage.local.set({
+  await setExecutionState(tabId, {
     macroRunning: true,
     currentMacroStep: 0,
     macroLoopRemaining: remaining
   });
 
-  sendLog(`Loop started: ${count} run(s)`, "info");
+  sendLog(`Loop started: ${count} run(s)`, "info", tabId);
 
   while (remaining > 0) {
     // Re-read settings at the start of each run so any edits/updates
     // (like delayMs or macroSteps) are respected and we keep storage in sync.
-    const currentSettings = await getSettings();
+    const currentSettings = await getSettings(tabId);
 
     remaining -= 1;
     currentSettings.macroLoopRemaining = remaining;
     currentSettings.macroExecutionCount = Number(currentSettings.macroExecutionCount || 0) + 1;
+    totalExecutions = currentSettings.macroExecutionCount;
 
-    await chrome.storage.local.set({
+    await setExecutionState(tabId, {
       macroLoopRemaining: remaining,
       macroExecutionCount: currentSettings.macroExecutionCount,
       currentMacroStep: 0,
       macroRunning: true
     });
 
-    sendLog(`Starting loop run ${executedRuns + 1} (${currentSettings.macroExecutionCount} total executions)`, "info");
+    sendLog(`Starting loop run ${executedRuns + 1} (${currentSettings.macroExecutionCount} total executions)`, "info", tabId);
 
-    await executeMacroSteps(currentSettings, 0);
+    await executeMacroSteps(currentSettings, tabId, 0);
     executedRuns += 1;
-
-    updateExecutionCount(currentSettings.macroExecutionCount);
 
     if (remaining > 0) {
       await new Promise((resolve) => setTimeout(resolve, currentSettings.delayMs));
     }
   }
 
-  sendLog(`Loop finished: ${executedRuns} run(s) completed.`, "info");
+  sendLog(`Loop finished: ${executedRuns} run(s) completed.`, "info", tabId);
 
-  await chrome.storage.local.set({
+  await setExecutionState(tabId, {
     macroRunning: false,
     currentMacroStep: 0,
     macroLoopRemaining: 0
@@ -368,7 +396,7 @@ async function runLoopMacro(settings, count) {
 
   return {
     executedRuns,
-    totalExecutions: settings.macroExecutionCount
+    totalExecutions
   };
 }
 
@@ -395,23 +423,45 @@ async function runStep(settings, stepIndex) {
   };
 }
 
-async function getSettings() {
-  const stored = await chrome.storage.local.get(DEFAULTS);
+async function continueResumedMacro(settings, tabId) {
+  await executeMacroSteps(settings, tabId, settings.currentMacroStep);
+
+  const fresh = await getSettings(tabId);
+
+  if (fresh.macroLoopRemaining > 0) {
+    await runLoopMacro(fresh, tabId, fresh.macroLoopRemaining);
+    return;
+  }
+
+  sendLog("Macro finished.", "info", tabId);
+
+  await setExecutionState(tabId, {
+    macroRunning: false,
+    currentMacroStep: 0,
+    macroLoopRemaining: 0
+  });
+}
+
+async function getSettings(tabId) {
+  const executionKey = tabExecutionStorageKey(tabId);
+  const stored = await chrome.storage.local.get({
+    ...DEFAULTS,
+    [executionKey]: EXECUTION_DEFAULTS
+  });
+  const execution = normalizeExecutionState(stored[executionKey]);
 
   return {
     ...DEFAULTS,
     ...stored,
     delayMs: Number(stored.delayMs) || DEFAULTS.delayMs,
     macroSteps: Array.isArray(stored.macroSteps) ? stored.macroSteps : [],
-    macroRunning: Boolean(stored.macroRunning),
-    currentMacroStep: Number(stored.currentMacroStep) || 0,
-    macroLoopRemaining: Number(stored.macroLoopRemaining) || 0,
-    macroExecutionCount: Number(stored.macroExecutionCount) || 0
+    ...execution
   };
 }
 
 async function resumeMacroIfNeeded() {
-  const settings = await getSettings();
+  const tabId = await getCurrentTabId();
+  const settings = await getSettings(tabId);
 
   if (!settings.macroRunning) {
     return;
@@ -420,11 +470,11 @@ async function resumeMacroIfNeeded() {
   if (settings.currentMacroStep >= settings.macroSteps.length) {
     if (settings.macroLoopRemaining > 0) {
       // Ensure we read fresh settings from storage in case values changed
-      await chrome.storage.local.set({ currentMacroStep: 0 });
+      await setExecutionState(tabId, { currentMacroStep: 0 });
       window.setTimeout(async () => {
         try {
-          const fresh = await getSettings();
-          await runLoopMacro(fresh, Number(fresh.macroLoopRemaining) || 0);
+          const fresh = await getSettings(tabId);
+          await runLoopMacro(fresh, tabId, Number(fresh.macroLoopRemaining) || 0);
         } catch (error) {
           console.warn("[Macro Clicker]", error.message);
         }
@@ -432,15 +482,23 @@ async function resumeMacroIfNeeded() {
       return;
     }
 
-    await chrome.storage.local.set({ macroRunning: false, currentMacroStep: 0, macroLoopRemaining: 0 });
+    await setExecutionState(tabId, { macroRunning: false, currentMacroStep: 0, macroLoopRemaining: 0 });
     return;
   }
 
   window.setTimeout(() => {
-    executeMacroSteps(settings, settings.currentMacroStep).catch((error) => {
+    continueResumedMacro(settings, tabId).catch((error) => {
       console.warn("[Macro Clicker]", error.message);
     });
   }, settings.delayMs);
+}
+
+async function getMessageTabId(message) {
+  if (Number.isFinite(Number(message?.tabId))) {
+    return Number(message.tabId);
+  }
+
+  return getCurrentTabId();
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -455,15 +513,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === "RUN_MACRO") {
-    getSettings()
-      .then((settings) => {
+    getMessageTabId(message)
+      .then((tabId) => getSettings(tabId).then((settings) => ({ settings, tabId })))
+      .then(({ settings, tabId }) => {
         if (settings.macroRunning) {
           sendResponse({ ok: false, error: "A macro is already running." });
           return null;
         }
 
         sendResponse({ ok: true, result: { started: true } });
-        runSingleMacro(settings).catch((error) => {
+        runSingleMacro(settings, tabId).catch((error) => {
           console.warn("[Macro Clicker] Macro run failed:", error.message);
         });
         return null;
@@ -474,15 +533,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === "RUN_MACRO_LOOP") {
-    getSettings()
-      .then((settings) => {
+    getMessageTabId(message)
+      .then((tabId) => getSettings(tabId).then((settings) => ({ settings, tabId })))
+      .then(({ settings, tabId }) => {
         if (settings.macroRunning) {
           sendResponse({ ok: false, error: "A macro is already running." });
           return null;
         }
 
         sendResponse({ ok: true, result: { started: true } });
-        runLoopMacro(settings, Number(message.loopCount) || 0).catch((error) => {
+        runLoopMacro(settings, tabId, Number(message.loopCount) || 0).catch((error) => {
           console.warn("[Macro Clicker] Loop macro failed:", error.message);
         });
         return null;
@@ -493,7 +553,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === "RUN_MACRO_STEP") {
-    getSettings()
+    getMessageTabId(message)
+      .then((tabId) => getSettings(tabId))
       .then((settings) => runStep(settings, message.stepIndex))
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));

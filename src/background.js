@@ -72,3 +72,21 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         });
     }
 });
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message?.type !== "GET_TAB_ID") {
+        return false;
+    }
+
+    if (!sender.tab?.id) {
+        sendResponse({ ok: false, error: "No sender tab found." });
+        return true;
+    }
+
+    sendResponse({ ok: true, tabId: sender.tab.id });
+    return true;
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+    chrome.storage.local.remove(`macroExecution:${tabId}`);
+});
