@@ -477,7 +477,7 @@ async function resumeMacroIfNeeded() {
           const fresh = await getSettings(tabId);
           await runLoopMacro(fresh, tabId, Number(fresh.macroLoopRemaining) || 0);
         } catch (error) {
-          console.warn("[Macro Clicker]", error.message);
+          console.warn("[MacroTap]", error.message);
         }
       }, settings.delayMs);
       return;
@@ -489,7 +489,7 @@ async function resumeMacroIfNeeded() {
 
   window.setTimeout(() => {
     continueResumedMacro(settings, tabId).catch((error) => {
-      console.warn("[Macro Clicker]", error.message);
+      console.warn("[MacroTap]", error.message);
     });
   }, settings.delayMs);
 }
@@ -524,7 +524,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
         sendResponse({ ok: true, result: { started: true } });
         runSingleMacro(settings, tabId).catch((error) => {
-          console.warn("[Macro Clicker] Macro run failed:", error.message);
+          console.warn("[MacroTap] Macro run failed:", error.message);
         });
         return null;
       })
@@ -544,7 +544,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
         sendResponse({ ok: true, result: { started: true } });
         runLoopMacro(settings, tabId, Number(message.loopCount) || 0).catch((error) => {
-          console.warn("[Macro Clicker] Loop macro failed:", error.message);
+          console.warn("[MacroTap] Loop macro failed:", error.message);
         });
         return null;
       })
@@ -567,5 +567,5 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 resumeMacroIfNeeded().catch((error) => {
-  console.warn("[Macro Clicker] Could not resume macro:", error.message);
+  console.warn("[MacroTap] Could not resume macro:", error.message);
 });
