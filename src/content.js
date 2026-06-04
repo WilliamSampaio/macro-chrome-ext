@@ -429,6 +429,7 @@ async function continueResumedMacro(settings, tabId) {
   const fresh = await getSettings(tabId);
 
   if (fresh.macroLoopRemaining > 0) {
+    await new Promise((resolve) => setTimeout(resolve, fresh.delayMs));
     await runLoopMacro(fresh, tabId, fresh.macroLoopRemaining);
     return;
   }
