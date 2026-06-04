@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Radio Selector Clicker",
+  "name": "MacroTap",
   "version": "1.0.0",
-  "description": "Selects a radio input and clicks a button on the current page.",
+  "description": "Save page elements as macro steps, replay them once, or run them in loops.",
   "permissions": [
     "activeTab",
     "storage",
@@ -16,7 +16,7 @@
   },
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Radio Selector Clicker"
+    "default_title": "MacroTap"
   },
   "content_scripts": [
     {
